@@ -2,24 +2,31 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/cupertino.dart';
-import 'detail.dart';
+import 'package:vb_grocery/model/subcategory.dart';
+import 'product_detail.dart';
+
+import 'package:cached_network_image/cached_network_image.dart';
+
+// ... other imports
 
 class SubcategoryScreen extends StatefulWidget {
   final String categoryId;
+  final String categoryName;
 
-  SubcategoryScreen({required this.categoryId});
+  SubcategoryScreen({required this.categoryId, required this.categoryName});
 
   @override
   _SubcategoryScreenState createState() => _SubcategoryScreenState();
 }
 
 class _SubcategoryScreenState extends State<SubcategoryScreen> {
+  late Future<void> fetchDataFuture;
   List<Map<String, dynamic>> subcategories = [];
 
   @override
   void initState() {
     super.initState();
-    fetchData();
+    fetchDataFuture = fetchData();
   }
 
   Future<void> fetchData() async {
@@ -48,18 +55,55 @@ class _SubcategoryScreenState extends State<SubcategoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Subcategory Screen'),
-      ),
-      body: GridView.builder(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 8.0,
-          mainAxisSpacing: 8.0,
+        leading: InkWell(
+          onTap: () {
+            Navigator.pop(context);
+          },
+          child: Icon(
+            Icons.arrow_back_ios,
+            size: 25,
+            color: Color(0xffEFFAEE),
+          ),
         ),
-        itemCount: subcategories.length,
-        itemBuilder: (context, index) {
-          return buildGridItem(subcategories[index]);
-        },
+        backgroundColor: Color(0xff5BCC52),
+        title: Text(
+          widget.categoryName,
+          style: TextStyle(
+              fontSize: 20,
+              fontFamily: "Nunito Sans",
+              fontWeight: FontWeight.w700,
+              color: Color(0xffEFFAEE)),
+          textAlign: TextAlign.start,
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: FutureBuilder(
+          future: fetchDataFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(
+                child: CircularProgressIndicator(),
+              );
+            } else if (snapshot.hasError) {
+              return Center(
+                child: Text('Error: ${snapshot.error}'),
+              );
+            } else {
+              return GridView.builder(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16.0,
+                  mainAxisSpacing: 16.0,
+                ),
+                itemCount: subcategories.length,
+                itemBuilder: (context, index) {
+                  return buildGridItem(subcategories[index]);
+                },
+              );
+            }
+          },
+        ),
       ),
     );
   }
@@ -75,19 +119,44 @@ class _SubcategoryScreenState extends State<SubcategoryScreen> {
         );
       },
       child: Card(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15.0),
+        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Image.network(
-              subcategory['product_image'],
-              height: 100,
-              width: 100,
-              fit: BoxFit.cover,
+            Container(
+              height: 140,
+              width: 190,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                color: Colors.transparent,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: CachedNetworkImage(
+                  imageUrl: subcategory['product_image'],
+                  placeholder: (context, url) =>
+                      Image.asset("assets/image/placeholder.jpg"),
+                  errorWidget: (context, url, error) => Icon(Icons.error),
+                  // height: 160,
+                  // width: 200,
+                  fit: BoxFit.fill,
+                ),
+              ),
             ),
-            SizedBox(height: 8.0),
-            Text(
-              subcategory['product_name'],
-              style: TextStyle(fontWeight: FontWeight.bold),
+            SizedBox(height: 2.0),
+            Padding(
+              padding: const EdgeInsets.only(left: 10.0, top: 5.0),
+              child: Text(
+                subcategory['product_name'],
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontFamily: "Nunito Sans",
+                    fontSize: 14),
+              ),
             ),
           ],
         ),

@@ -1,7 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
 import 'package:vb_grocery/screens/subcategory_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -25,75 +25,77 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
-
       if (data.containsKey('JSON_DATA')) {
         setState(() {
           categories = List.from(data['JSON_DATA']);
         });
       } else {
-        // Handle API error
         print('API Error: ${data['error_message']}');
       }
     } else {
-      // Handle HTTP error
       print('HTTP Error: ${response.statusCode}');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Text(
-          'Home',
-          style: TextStyle(color: Color(0xffEFFAEE), fontFamily: "Nunito Sans"),
-        ),
-        backgroundColor: Color(0xff5BCC52),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.all(5.0),
-            child: Icon(
-              Icons.notifications,
-              size: 25,
-              color: Color(0xffEFFAEE),
+    return WillPopScope(
+        onWillPop: () async => false,
+        child: Scaffold(
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            title: Text(
+              'Home',
+              style: TextStyle(
+                  color: Color(0xffEFFAEE),
+                  fontSize: 20,
+                  fontFamily: "Nunito Sans"),
+            ),
+            backgroundColor: Color(0xff5BCC52),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: Icon(
+                  Icons.notifications,
+                  size: 25,
+                  color: Color(0xffEFFAEE),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: Icon(Icons.shopping_cart,
+                    size: 25, color: Color(0xffEFFAEE)),
+              )
+            ],
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: FutureBuilder(
+              future: fetchData,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  // Show loader while waiting for the API call to complete
+                  return Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  // Handle error
+                  return Center(child: Text('Error loading data'));
+                } else {
+                  return GridView.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 6.0,
+                      mainAxisSpacing: 6.0,
+                    ),
+                    itemCount: categories.length,
+                    itemBuilder: (context, index) {
+                      return buildGridItem(categories[index]);
+                    },
+                  );
+                }
+              },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(5.0),
-            child:
-                Icon(Icons.shopping_cart, size: 25, color: Color(0xffEFFAEE)),
-          )
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: FutureBuilder(
-          future: fetchData,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              // Show loader while waiting for the API call to complete
-              return Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              // Handle error
-              return Center(child: Text('Error loading data'));
-            } else {
-              return GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 6.0,
-                  mainAxisSpacing: 6.0,
-                ),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  return buildGridItem(categories[index]);
-                },
-              );
-            }
-          },
-        ),
-      ),
-    );
+        ));
   }
 
   Widget buildGridItem(Map<String, dynamic> category) {
@@ -108,8 +110,9 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      SubcategoryScreen(categoryId: category['category_id']),
+                  builder: (context) => SubcategoryScreen(
+                      categoryId: category['category_id'],
+                      categoryName: category['categoty_name']),
                 ),
               );
             },
@@ -117,13 +120,13 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: FadeInImage(
+              child: CachedNetworkImage(
                 height: 90,
                 width: 90,
-                placeholder: AssetImage('assets/image/placeholder.jpg'),
-                image: NetworkImage(
-                  category['category_image'],
-                ),
+                placeholder: (context, url) =>
+                    Image.asset("assets/image/placeholder.jpg"),
+                imageUrl: category['category_image'],
+                errorWidget: (context, url, error) => Icon(Icons.error),
                 fit: BoxFit.cover,
               ),
             ),
